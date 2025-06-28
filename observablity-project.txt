@@ -1,0 +1,222 @@
+End to End Observability Project | Beginner Level guide for complex micro service project
+
+https://github.com/open-telemetry/opentelemetry-demo    (EXPLORE this project ) 
+
+How Telemetry Instumented in this services you can see 
+
+this project has ( card services , currency service , payment servics .......) each of Indival reach diff lanagange 
+
+
+ open Telemetry --> to right traces and metics 
+ ex: from opentelemetry import trace, metics  
+ 
+ Note : otel (shotcut from opentelemetry) 
+ 
+ observability setup properly we needed 2 things
+ 1 Instumented  --> developement team (metics , traces , logs must there in code ) as devloper it Instumented with opentelemetry
+ 2 implementation --> k8 , helm ,grafana , prometheus , jaeger 
+ 
+ 
+ Q )why should we use opentelemetry , and how it works ? 
+ ans) 1. there are 100 of observability tools in market today company is using datadog  may be tommarow comapny use Dynatrace (they want to move from datadog to Dynatrace)
+ or they want move grafana to jaeger (or ) jaeger to grafana 
+ 
+ 2.if the developement team 
+ 
+     microservices (where we retun code + metics , traces , logs )      
+	 
+	 if comapnay want to change  promclient to nagios 
+	                              datadog --> Dynatrace 
+								   Dynatrace --> datadog 
+								   or any ........
+								   
+3. when the comapany moving into another stack --> developement team has to go each and every microservices -->(modify metics , traces , logs ) 
+4. this is very big problem in cloud native application , and company also 
+
+5. so for that opentelemetry (is standed) 
+       open-telemetry --> use API and SDK 
+	   open-telemetry --> has Exportor 
+	   
+6.	   you can use  API and SDK of open-telemetry in the place of (prometheus , Nagious , datadog .....) 
+7.in the open-telemetry --> Exportor we can defend --> expose the metrics to (prometheus)
+8. in the open-telemetry --> Exportor  the traces to jaeger
+9. open-telemetry will be standed  (all the observability stack aggred to open-telemetry stack as a standed) 
+
+now developers started using open-telemetry ( API and SDK) 
+10. we have a file such as exportor configuration file --> ( you can defend what is your backend) or what is reciver's of metics , logs , traces 
+
+11.  the code microservices combines with metics , logs , traces   --> open-telemetry has Recevier[otel Recevier ] --> then it will process it [otel process it ] -->
+--> otel(open-telemetry ) Exportor (metics , logs , traces ) --> any backend that you needed
+
+
+
+12. how backed is defined --> otel(open-telemetry) --Exportor in that config file 
+
+this is standed by the open-telemetry 
+
+13 .  tommarow just change the backed file otel(open-telemetry) --Exportor in that config file 
+
+14. jaeger means (it will tells service A to Service B how much times it takes )
+
+
+
+
+
+15. if in backed jaeger is used means -->  there is reciver in jaeger (or ) agent in jaeger forword the information into the jaeger database (db)
+jaeger database (db) Elastic search --> we can attack EBS Volumes if neeed (for back up and storeage perpose) --> finally UI user can Acess it view it 
+UI get the information from Elastic serach Database 
+
+
+otel(open-telemetry)Exportor --> backed (if we attched jaeger  for backed) --> Recevier of jaeger --> DB for jaeger we can attack Elastic search --> UI get the information from Elastic serach Database
+
+16. or backend is prometheus  --> there is Recevier component is prometheus aswell 
+it will reciver the information from backed of (otel) open-telemetry 
+this information updated in prometheus in TSDB (time series data base) of prometheus
+then there is prometheus http server users can fire promql Query  and get the inforssmtion 
+
+otel(open-telemetry)Exportor --> backed (if we attched prometheus for backed) --> Recevier of prometheus --> TSDB --> http -->promql (fetch the data from the 	get the infromation) 
+
+
+
+minikube start 
+
+Let check if any cluter is running or not 
+ kubectl config current-context     ( which cluster is running it will tells ) 
+ 
+ kubectl get nodes   (Get nodes in the cluster )
+  
+ kubectl get componentstatuses   (Check health of components)
+ 
+ This is Document link for Demo Application   :   https://opentelemetry.io/docs/demo/kubernetes-deployment/
+
+Install using Helm (recommended)
+
+--> helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+
+
+-- > helm install my-otel-demo open-telemetry/opentelemetry-demo
+
+
+helm version   (check Helm is installed or not ) 
+
+minikube status 
+
+
+(Optional but Useful) Enable Ingress & Dashboard
+minikube addons enable ingress
+minikube addons enable metrics-server
+
+
+----- namespace -----
+
+# 1. Create the namespace
+kubectl create namespace otel-demo
+
+# 2. Add the OpenTelemetry Helm repository
+helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+
+# 3. Update your Helm repositories
+helm repo update
+
+# 4. Install the OpenTelemetry demo in the otel-demo namespace
+helm install my-otel-demo open-telemetry/opentelemetry-demo -n otel-demo
+
+# 5. Check the status of all pods in that namespace
+kubectl get pods -n otel-demo
+
+kubectl --namespace otel-demo port-forward svc/frontend-proxy 8080:8080
+
+
+Note : it will take 30 min to run all pods wait wait wait ......
+
+ISSUE :
+
+it's clear that most of your OpenTelemetry demo pods are stuck in Pending or ContainerCreating states. Let's break down why this is happening and how to fix it.
+
+🔍 Root Cause Analysis
+⚠️ Most likely reasons for Pending or Init:0/1 in Minikube:
+
+
+✅ 1. Insufficient Resources (CPU/RAM)
+Many of these services require significant memory/CPU, and Minikube by default might not have enough.
+
+🔍 Check current Minikube resources:
+
+minikube status
+minikube ssh -- free -m
+Mem:    total: 6872 MB
+        used:  4498 MB
+        free:   114 MB
+        buff/cache: 2259 MB
+        available: 2167 MB
+
+🔍 Observations:
+Free memory is very low (114 MB), which explains why many of your pods are stuck in Pending or Init states.
+
+Even though there's ~2 GB "available", Kubernetes requests/limits might prevent scheduling if they can't guarantee the required memory.
+
+
+✅ Solution: Restart Minikube with More Resources
+You need at least 8 GB RAM for the OpenTelemetry demo to run comfortably.
+
+🛠️ Step-by-step fix:
+1. Stop and delete the existing cluster:
+minikube stop
+minikube delete
+
+. Start with higher memory and CPU (at least 4 CPUs, 8 GB RAM):
+minikube start --cpus=4 --memory=8192
+
+If your machine supports more (e.g. 10 GB or more), even better:
+minikube start --cpus=4 --memory=10240
+
+ X Exiting due to MK_USAGE: Docker Desktop has only 6872MB memory but you specified 10240MB
+ 
+✅ Solution: Increase Docker Desktop Memory Allocation
+🔹 Step 1: Open Docker Desktop Settings
+Open Docker Desktop
+
+Go to Settings (⚙️ icon)
+
+Click on Resources → Advanced
+
+Increase the Memory slider to at least 10 GB (10240 MB)
+You can go higher if your system allows (e.g., 12 GB)
+
+⚠️ Don’t forget to click Apply & Restart
+
+
+
+helm list -A   (how many Helm is running ) 
+
+kubectl get pod -n otel-demo -l app.kubernetes.io/name=jaeger
+
+
+----- namespace -----
+
+# 1. Create the namespace
+kubectl create namespace otel-demo
+
+# 2. Add the OpenTelemetry Helm repository
+helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+
+# 3. Update your Helm repositories
+helm repo update
+
+# 4. Install the OpenTelemetry demo in the otel-demo namespace
+helm install my-otel-demo open-telemetry/opentelemetry-demo -n otel-demo
+
+# 5. Check the status of all pods in that namespace
+kubectl get pods -n otel-demo 
+
+
+kubectl get pods -n otel-demo -w
+
+kubectl --namespace otel-demo port-forward svc/frontend-proxy 8080:8080
+
+if you don't want port forword then 
+
+kubectl --namespace otel-demo port-forward svc/frontend-proxy 8080:8080 --address 0.0.0.0
+
+
+opentelemetry-demo/src   you can see the all details Explore it (very good knowlwege  on it ) 
